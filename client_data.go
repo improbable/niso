@@ -1,6 +1,9 @@
 package niso
 
-import "context"
+import (
+	"context"
+	"net/url"
+)
 
 // ClientData is the information stored for an OAuth2 client
 type ClientData struct {
@@ -10,9 +13,14 @@ type ClientData struct {
 }
 
 // ValidSecret checks if the given secret is valid for this OAuth2 client
+// TODO(stefan): consider doing constant time equality check
 func (c *ClientData) ValidSecret(secret string) bool {
-	// Consider doing constant time equality check
-	return secret == c.ClientSecret
+	// Check if client gives us correct client_secret. It should be urlescaped according to
+	// https://tools.ietf.org/html/rfc6749#section-2.3.1.
+	return url.QueryEscape(c.ClientSecret) == secret ||
+		// Some clients are broken and are not urlescaping. We need to accept his behavior to keep backwards compatibility.
+		// TODO(stefan): use QueryUnescape(secret) when all clients have been migrated.
+		secret == c.ClientSecret
 }
 
 // getClientDataAndValidate looks up and authenticates the basic auth using the given storage.
